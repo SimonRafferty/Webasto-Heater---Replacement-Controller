@@ -8,8 +8,9 @@
 //
 // I've changed it from a Shower to a general purpose controller which tries to regulate the 
 // Temperature to a pre-defined target by adjusting the Fueling and Combustion fan
-// I've converted the code to run on an Adafruit Huzzah32 (ESP32) and designed a drop-in
+// I've converted the code to run on an Adafruit Feather M0 SAMD21 and designed a drop-in
 // replacement PCB for Webasto ThermoTop C & E Heaters.
+//
 // The wiring harness is similar to the original, except:
 // 6 Pin Connector - Pin:  [Changes indicated by * ]
 // 1 - Clock (+12V = Heater On)/(0V = Heater Off)
@@ -23,6 +24,9 @@
 // It has a different 25C Resistance around 4.7k.  You will need to change R12 to 4.7k
 // and in get_webasto_temp, change "Nominal resistance at 25 ºC" from 100000 to 4700
 //
+// The latest revision of the PCB (https://oshwlab.com/SimonRafferty/webasto-controller)
+// has provision for a Thermal Fuse.  This simply cuts the fueling if the heater really overheats
+// to prevent it catching fire.  I used RS Part Number 797-6042 which fuses at 121C
 //
 // Simon Rafferty SimonSFX@Outlook.com 2020
 //*********************************************************************************************
@@ -31,12 +35,33 @@
 //#include <SAMD21turboPWM.h>
 
 //Heater Config 
+//*********************************************************************************
+//**Change these values to suit your application **
 int heater_min = 60; // Increase fuel if below
-int heater_target = 70; // degrees C Decrease fuel if above
-int water_warning = 75;// degrees C
-int water_overheat = 85;// degrees C
+int heater_target = 70; // degrees C Decrease fuel if above, increase if below.
+int water_warning = 75;// degrees C - At this temperature, the heater idles
+int water_overheat = 85;// degrees C - This is the temperature the heater will shut down
 
-//Fuel Mixture 
+//Fuel Mixture
+//If you find the exhaust is smokey, increase the fan or reduce the fuel
+float throttling_high_fuel = 1.8;
+float throttling_high_fan = 90;
+float throttling_steady_fuel = 1.3;
+float throttling_steady_fan = 65;
+float throttling_low_fuel = 0.83;
+float throttling_low_fan = 50;
+float throttling_idle_fuel = 0.5; //Just enough to keep it alight
+float throttling_idle_fan = 30; 
+
+//Fuel Pump Setting
+//Different after-market pumps seem to deliver different amounts of fuel
+//If the exhaust is consistently smokey, reduce this number
+//If you get no fuel (pump not clicking) increase this number
+//Values 22,30 or 60 seem to work in most cases.
+
+int pump_size = 60; //22,30,60 
+//**********************************************************************************
+ 
 //Prime
 float prime_low_temp = 0;
 float prime_high_temp = 20;
@@ -52,15 +77,6 @@ float start_fuel = 1;
 int full_power_increment_time = 30; //seconds
 
 
-//Throttling_Power Quiet Mode
-float throttling_high_fuel = 1.8;
-float throttling_high_fan = 90;
-float throttling_steady_fuel = 1.3;
-float throttling_steady_fan = 65;
-float throttling_low_fuel = 0.83;
-float throttling_low_fan = 50;
-float throttling_idle_fuel = 0.5; //Just enough to keep it alight
-float throttling_idle_fan = 30; 
 
 
 //Pin Connections
@@ -74,10 +90,6 @@ int lambda_pin = A3;
 int push_pin = A0;
 //Pin Connections
 
-//Hardware Config
-int pump_size = 60; //22,30,60 
-//bool high_temp_exhaust_sensor = false;
-//Hardware Config
 
 //Temperature Filtering
 #define filterSamples   13              // filterSamples should  be an odd number, no smaller than 3
@@ -155,27 +167,6 @@ void setup() {
 
   
   
-  //PWM Works differently on ESP32
-  //TCCR1B = TCCR1B & 0b11111000 | 0x01;  // magic Fast PWM parameter
-  // configure PWM
-  //ledcSetup(glow_channel, freq, resolution);  
-  // attach the channel to the GPIO2 to be controlled
-  //ledcAttachPin(glow_plug_pin, glow_channel);
-
-  //ledcSetup(water_channel, freq, resolution);  
-  // attach the channel to the GPIO2 to be controlled
-  //ledcAttachPin(water_pump_pin, water_channel);
-
-  //ledcSetup(air_channel, freq, resolution);  
-  // attach the channel to the GPIO2 to be controlled
-  //ledcAttachPin(burn_fan_pin, air_channel);
-
-  //Setup command parser callback functions
-  //cmdCallback.addCmd("T", &Serial_Turbo_Mode); //Expects "T 0\n" or "T 1\n"
-  //cmdCallback.addCmd("P", &Serial_Purge_Mode); //Expects "P 0\n" or "P 1\n"
-  //pwm.setClockDivider(3, false); //This sets a frequency of 15,625Hz at 1024 prescale
-  //pwm.timer([0, 1, 2], [1, 2, 4, 8, 16, 64, 256, 1024], [2-MaxSteps], [true, false])
-  //pwm.timer(0, 1024, 1000, true);  //Timer=0, Prescaler=1024, Steps=1000, Single Slope PWM
 
   
   analogWrite(water_pump_pin, 100); //Run water pump on startup for a few seconds
@@ -194,7 +185,6 @@ void setup() {
   delay(3000);
   
 
-  //pwm.enable(0, true);  //Start Timer 0
   
   Serial.begin(115200);
 
@@ -205,7 +195,5 @@ void loop() { // runs over and over again, calling the functions one by one
   temp_data();
   control();
   webasto();
-  // Check for new char on serial and call function if command was entered
-  //cmdCallback.updateCmdProcessing(&myParser, &myBuffer, &Serial1);
 
 }

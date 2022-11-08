@@ -8,7 +8,6 @@ void fuel_pump() {
     pulse_started_off_at = millis()-50;
   }
 
-  int default_fuel_size = 60;
 
   int pulse_length = 9;
 

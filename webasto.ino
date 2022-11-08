@@ -4,7 +4,6 @@ static unsigned long fan_timer;
 static String ShutdownReason = "";
 static float temp_init;
 static int cooled_off = 0;
-bool Ret_Val = false;
 
 
   if (millis() < timer) {
@@ -23,7 +22,6 @@ bool Ret_Val = false;
       burn_mode = 1;
       seconds = 0;
       Ignition_Failures = 0;
-      Incidents = 0;
       glow_time = 0;
       //temp_init = exhaust_temp; // store the exhaust temperature before trying to start the fire
 
@@ -47,7 +45,7 @@ bool Ret_Val = false;
       burn = 0;
     }
 */
-    if ((exhaust_temp > 250) && (burn_mode != 3)) { // if overheating. Temp sometimes spikes as heater shuts down. This is not a fail.
+    if ((exhaust_temp > 350) && (burn_mode != 3)) { // if overheating. Temp sometimes spikes as heater shuts down. This is not a fail.
       message = "Exhaust Overheat";
       Serial.println("############## OVERHEAT ####################");
       ShutdownReason = "Overheat ";
@@ -92,10 +90,10 @@ bool Ret_Val = false;
         
         if(seconds > 0 && seconds < 5)
         {
-          Ret_Val = Flame_Sensor(true); //Initialise Flame Sensor
           fan_speed = 70; //prime_fan_speed * 2;
           temp_init = exhaust_temp; // store the exhaust temperature before trying to start the fire
-          glow_time = 105;
+          //glow_time = 105;
+          glow_time = 30;
           fuel_need = 0;
           message = "Clearing Chamber";
         }
@@ -111,6 +109,8 @@ bool Ret_Val = false;
         if(seconds > 9 && seconds <= 11)
           fuel_need = 0;
 
+
+        //Measure initial Exhaust temperature just after glow plug turned off
         if (seconds >=40 && seconds <= 41)
         {
           temp_init = exhaust_temp;
@@ -136,52 +136,45 @@ bool Ret_Val = false;
             fan_speed = start_fan_speed; // get some more air and restart pumping fuel slowly        
         }
 
-        if (((exhaust_temp - temp_init) > 10) && (seconds >=50)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+        if (((exhaust_temp - temp_init) > 15) && (seconds >=50)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
           burn_mode = 2; // go to main burning mode and initialize variables
           seconds = 0;
           glow_time = 0;
-          Ignition_Failures = 0;
-          Incidents = 0;
+          Ignition_Failures = 0;  //Successful start, clear failure count
           temp_init = exhaust_temp; 
           fan_timer = millis();
           message = "Started";
 
         }
 
-        if ((seconds > 120) && (burn_mode == 1)) {
+        //Allow a max 140s for exhaust temperature to rise
+        if ((seconds > 140) && (burn_mode == 1)) {
           // the fire sequence didn't work, give it an other try
           burn_mode = 3;
           seconds = 0;
-          Ignition_Failures ++;
-          Incidents ++;
+          Ignition_Failures ++;  //Increase failure count
           glow_time = 5;
           cooled_off = 0;
           message = "Restarting";
         }
-        if(!debug_glow_plug_on) {
-          Ret_Val = Flame_Sensor(false);
-        }
-        
-        if ((exhaust_temp < (temp_init-5.0)) && (seconds >= 60) && (burn_mode == 1)) { // if flame died during burn
+
+/*
+        if ((exhaust_temp < (temp_init-5.0)) && (seconds >= 120) && (burn_mode == 1)) { // if flame died during burn
           burn_mode = 3;
           seconds = 0;
           Ignition_Failures ++;
-          Incidents ++;
           cooled_off = 1;
           message = "Flameout";
         }
-
+*/
       } break;
 
     case 2: { // a really simple flame managment here, just get at full power
 
-        //if ((exhaust_temp < 400 || water_temp < 50) && !webasto_fail) {
         if ( water_temp < water_overheat && !webasto_fail) {
          
           //Slowly speed up
-          //if (fan_speed<(final_fan_speed-1)) { 
-          if(exhaust_temp <= 40) {
-          //if(water_temp <= 40) {
+          if(water_temp <= 40) {
 
             if(millis() - fan_timer >= 333)
             {
@@ -224,20 +217,14 @@ bool Ret_Val = false;
           seconds = 0;
         }
 
-        if (exhaust_temp > 0 && exhaust_temp < 40 && exhaust_temp < exhaust_temp_sec[9]-5 && seconds >= 90) { // if flame died
-          burn = 0;
-          seconds = 0;
-          burn_mode = 3;
-          EX_Mute = false;
-          message = "Running Flameout";
-        }
-        
+        //If, after 240s running, the exhaust temp drops below the water temp, the flame must have died.
+        //After much experimentation, this seems the most reliable determinant. 
         if (exhaust_temp  < water_temp && seconds >= 240) { // flame has died
           burn = 0;
           seconds = 0;
           burn_mode = 3;
           EX_Mute = false;
-          message = "Flame Died";
+          message = "Exh < Wat T";
         }
         
         if (seconds >= 3600) { // Timeout
@@ -268,7 +255,7 @@ bool Ret_Val = false;
           glow_time = 60;
           water_pump_speed = 100;          
         }
-        if (seconds > 120) {
+        if (seconds > 80) {
           burn_mode = 0;
           message = "Off";
           glow_time = 0;

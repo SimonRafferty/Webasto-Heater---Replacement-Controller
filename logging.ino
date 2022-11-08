@@ -20,20 +20,20 @@ void logging(int ignit_fail, float temp_init, int seconds){
     
     Serial.print(webasto_fail);
     Serial.print(" | IgFail#: ");
-    Serial.print(Incidents);
+    Serial.print(ignit_fail);
 //    Serial.print(" | BGo: ");
 //    Serial.print(burn);
-//    Serial.print(" | B Mode: ");
-//    if(burn_mode == 0)
-//      Serial.print("OFF");
-//    if(burn_mode == 1)
-//      Serial.print("Starting");
-//    if(burn_mode == 2)
-//      Serial.print("Running");
-//    if(burn_mode == 3)
-//      Serial.print("Shuting Down");
+    Serial.print(" | B Mode: ");
+    if(burn_mode == 0)
+      Serial.print("OFF");
+    if(burn_mode == 1)
+      Serial.print("Starting");
+    if(burn_mode == 2)
+      Serial.print("Running");
+    if(burn_mode == 3)
+      Serial.print("Shuting Down");
 
-    Serial.print(burn_mode);
+    //Serial.print(burn_mode);
     Serial.print(" | W_Tmp: ");
     Serial.print(water_temp);
     //Serial.print(" | W_Raw: ");
@@ -59,9 +59,6 @@ void logging(int ignit_fail, float temp_init, int seconds){
     //Serial.print(" | Glow Left: ");
     //
     Serial.print(glow_left);
-    Serial.print(" | Batt: ");
-
-    Serial.print(Battery_Voltage(),1);    
     
     Serial.print(" | Time: ");
 
@@ -71,6 +68,6 @@ void logging(int ignit_fail, float temp_init, int seconds){
     Serial.print(" |  ");
     Serial.println(message); 
 
-    int Running = int(heater_on);
+
 
 }

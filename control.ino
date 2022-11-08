@@ -1,6 +1,4 @@
 void control() {
-static unsigned long timer;
-bool Ret_Val = false;
 
   //Latching switch connected to heating timer.
   //When On, attempt to regulate temperature to target
@@ -27,17 +25,19 @@ bool Ret_Val = false;
     {
       burn = 0;  //Shut down nicely
     }
-    if(burn_mode==0 && seconds<600) {
+
+    //Run the fan for a couple on minutes to cool down
+    if(burn_mode==0 && seconds<30) {
       fan_speed = 40;
       burn_fan();
       delay(1000);
     }  
-    if(burn_mode==0 && seconds>=600) {
+    if(burn_mode==0 && seconds>=30) {
       fan_speed = 0;
       burn_fan();
     }  
     if(burn_mode==0) water_pump_speed = 0; //Switch off pump if heater has shut down
-    if(water_temp > heater_target) {
+    if(water_temp > heater_target-15) {
       water_pump_speed = 100;  //Keep pump running if water hot
     } else {
       water_pump_speed = 0;

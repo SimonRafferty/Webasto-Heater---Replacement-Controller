@@ -2,13 +2,16 @@ float running_ratio(float exhaust_temp) {
   static unsigned long fuel_change_timer;
   static unsigned long fan_change_timer;
   //Not hot enough to start adjusting
-  int fuel_target;
-  int fan_target;
+  int fuel_target = 0;
+  int fan_target = 0;
   int fuel_current;
 
+
+  fuel_current = fuel_need*100;
+  
   if(exhaust_temp > 40)
   {    
-    fuel_current = fuel_need*100;
+    
    
     if(water_temp < heater_min)  { 
       fuel_target = throttling_high_fuel*100;

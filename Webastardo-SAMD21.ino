@@ -1,6 +1,7 @@
 //*********************************************************************************************
 // DIY Webasto Controller
 // Board:  Adafruit Feather M0
+// Add the following board link in preferences: https://adafruit.github.io/arduino-board-index/package_adafruit_index.json
 // Code based on a Webasto Shower Controller by David McLuckie
 // https://davidmcluckie.com/arduino-webasto-shower-project/ 
 // His project was based on the work of Mael Poureau
@@ -27,6 +28,8 @@
 // The latest revision of the PCB (https://oshwlab.com/SimonRafferty/webasto-controller)
 // has provision for a Thermal Fuse.  This simply cuts the fueling if the heater really overheats
 // to prevent it catching fire.  I used RS Part Number 797-6042 which fuses at 121C
+// If you prefer the excitement of waiting for it to catch fire, you can always bridge the 
+// contacts with a bit of wire.
 //
 // Simon Rafferty SimonSFX@Outlook.com 2020
 //*********************************************************************************************
@@ -37,21 +40,34 @@
 //Heater Config 
 //*********************************************************************************
 //**Change these values to suit your application **
-int heater_min = 60; // Increase fuel if below
-int heater_target = 70; // degrees C Decrease fuel if above, increase if below.
+int heater_min = 55; // Increase fuel if below
+int heater_target = 65; // degrees C Decrease fuel if above, increase if below.
 int water_warning = 75;// degrees C - At this temperature, the heater idles
-int water_overheat = 85;// degrees C - This is the temperature the heater will shut down
+int water_overheat = 83;// degrees C - This is the temperature the heater will shut down
 
 //Fuel Mixture
 //If you find the exhaust is smokey, increase the fan or reduce the fuel
 float throttling_high_fuel = 1.8;
+//float throttling_high_fuel = 1.6; //In summer, exhaust gets too hot on startup
 float throttling_high_fan = 90;
 float throttling_steady_fuel = 1.3;
 float throttling_steady_fan = 65;
-float throttling_low_fuel = 0.83;
-float throttling_low_fan = 50;
-float throttling_idle_fuel = 0.5; //Just enough to keep it alight
+float throttling_low_fuel = 0.83;  //(Winter Setting)
+float throttling_low_fan = 55;
+//Just enough to keep it alight at idle
+float throttling_idle_fuel = 0.6; //Do not reduce this value
 float throttling_idle_fan = 30; 
+
+//*********************************
+// ToDo:  Winter & summer need slightly different idle settings
+// I'm guessing because the air intake temperature is higher in summer, it doesn't
+// need as much fuel to heat to a given temperature.
+// Using the winter setting in Summer causes it to overheat & shut down before the  
+// water tank has heated properly.
+// * Need to find a way of switching automatically
+//********************************
+
+
 
 //Fuel Pump Setting
 //Different after-market pumps seem to deliver different amounts of fuel
@@ -63,7 +79,8 @@ int pump_size = 60; //22,30,60
 //**********************************************************************************
  
 //Prime
-float prime_low_temp = 0;
+//float prime_low_temp = 0;
+float prime_low_temp = 4; //Wasn't always starting cold, increase fueling a bit
 float prime_high_temp = 20;
 
 float prime_fan_speed = 15;
@@ -72,7 +89,8 @@ float prime_high_temp_fuelrate = 2.0;
 
 //Inital
 float start_fan_speed = 40;
-float start_fuel = 1;
+//float start_fuel = 1;  //Summer setting
+float start_fuel = 1.5;  //Winter Setting
 
 int full_power_increment_time = 30; //seconds
 
@@ -118,11 +136,10 @@ String message = "Off";
 //bool pushed;
 //bool long_press;
 bool heater_on;
-bool debug_glow_plug_on = 2;
+bool debug_glow_plug_on = false;
 int debug_water_percent_map = 999;
 
 //Varaiables
-int Incidents = 0; //Things that have gone wrong during combustion
 int Ignition_Failures = 0;
 float fan_speed; // percent
 float water_pump_speed; // percent

@@ -19,8 +19,8 @@ void logging(int ignit_fail, float temp_init, int seconds){
     //New debug variables 
     
     Serial.print(webasto_fail);
-    Serial.print(" | IgFail#: ");
-    Serial.print(ignit_fail);
+    Serial.print(" | StartFail#: ");
+    Serial.print(Start_Failures);
 //    Serial.print(" | BGo: ");
 //    Serial.print(burn);
     Serial.print(" | B Mode: ");

@@ -49,7 +49,7 @@ static int cooled_off = 0;
       message = "Exhaust Overheat";
       Serial.println("############## OVERHEAT ####################");
       ShutdownReason = "Overheat ";
-      //webasto_fail = 1;
+      Start_Failures++;  
       burn_mode = 3;
       burn = 0;
      }
@@ -57,7 +57,7 @@ static int cooled_off = 0;
   } else { // if there has been a major failure, stop everything
     burn = 0;
     burn_mode = 3;
-    Ignition_Failures = 0;
+    
     message = "Major Fail";
     if(seconds > 600) webasto_fail = 0; //Reset failure after 10 mins switched off
   }
@@ -69,7 +69,7 @@ static int cooled_off = 0;
         fuel_need = 0;
         glow_time = 0;
         lean_burn = 0;
-        Ignition_Failures = 0;
+        
       } break;
 
     case 1: { // the fire starting sequence
@@ -92,8 +92,7 @@ static int cooled_off = 0;
         {
           fan_speed = 70; //prime_fan_speed * 2;
           temp_init = exhaust_temp; // store the exhaust temperature before trying to start the fire
-          //glow_time = 105;
-          glow_time = 30;
+          glow_time = 60;  //30 Sec was not long enough in cold weather
           fuel_need = 0;
           message = "Clearing Chamber";
         }
@@ -111,7 +110,7 @@ static int cooled_off = 0;
 
 
         //Measure initial Exhaust temperature just after glow plug turned off
-        if (seconds >=40 && seconds <= 41)
+        if (seconds >=65 && seconds <= 66)
         {
           temp_init = exhaust_temp;
           fan_timer = millis();
@@ -121,7 +120,11 @@ static int cooled_off = 0;
 
 
         if (seconds > 17) { // the glow plug has just been turn of (7+12=19)
-          fuel_need = start_fuel;
+          if(temp_init < start_fuel_Threshold) {
+            fuel_need = start_fuel_Cold;
+          } else {
+            fuel_need = start_fuel_Warm;
+          }
           message = "Firing Up";
 
           if(fan_speed < start_fan_speed)
@@ -136,37 +139,38 @@ static int cooled_off = 0;
             fan_speed = start_fan_speed; // get some more air and restart pumping fuel slowly        
         }
 
-        if (((exhaust_temp - temp_init) > 15) && (seconds >=50)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+        //if (((exhaust_temp - temp_init) > 15) && (seconds >=50)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+        if (((exhaust_temp - temp_init) > 15) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
           burn_mode = 2; // go to main burning mode and initialize variables
           seconds = 0;
           glow_time = 0;
-          Ignition_Failures = 0;  //Successful start, clear failure count
+          Start_Failures = 0;  //Successful start, clear failure count
           temp_init = exhaust_temp; 
           fan_timer = millis();
           message = "Started";
 
         }
 
-        //Allow a max 140s for exhaust temperature to rise
-        if ((seconds > 140) && (burn_mode == 1)) {
+        //Allow a max 100s for exhaust temperature to rise
+        if ((seconds > 100) && (burn_mode == 1)) {
           // the fire sequence didn't work, give it an other try
           burn_mode = 3;
           seconds = 0;
-          Ignition_Failures ++;  //Increase failure count
+          Start_Failures ++;  //Increase failure count
           glow_time = 5;
           cooled_off = 0;
           message = "Restarting";
         }
 
-/*
+
         if ((exhaust_temp < (temp_init-5.0)) && (seconds >= 120) && (burn_mode == 1)) { // if flame died during burn
           burn_mode = 3;
           seconds = 0;
-          Ignition_Failures ++;
+          Start_Failures ++;
           cooled_off = 1;
           message = "Flameout";
         }
-*/
+
       } break;
 
     case 2: { // a really simple flame managment here, just get at full power
@@ -212,6 +216,8 @@ static int cooled_off = 0;
           fuel_need = 0;
           cooled_off = 1;
           message = "Therm Fail";
+          //Start_Failures ++;
+          webasto_fail = true;
           burn = 0;
           burn_mode = 3;
           seconds = 0;
@@ -223,19 +229,21 @@ static int cooled_off = 0;
           burn = 0;
           seconds = 0;
           burn_mode = 3;
+          Start_Failures ++;
           EX_Mute = false;
           message = "Exh < Wat T";
         }
-        
+/*        
         if (seconds >= 3600) { // Timeout
           //Most often the flame seems to die around an hour after startup.  This just ensures it never gets there
           burn = 0;
           seconds = 0;
           burn_mode = 3;
+          Start_Failures = 0;
           EX_Mute = false;
           message = "Timeout";
         }
- 
+*/ 
       } break;
 
     case 3: { // snuff out the fire, with just a little air to avoid fumes and backfire
@@ -255,7 +263,7 @@ static int cooled_off = 0;
           glow_time = 60;
           water_pump_speed = 100;          
         }
-        if (seconds > 80) {
+        if (exhaust_temp < water_temp) {  //Wait until exhaust cools below water temp
           burn_mode = 0;
           message = "Off";
           glow_time = 0;

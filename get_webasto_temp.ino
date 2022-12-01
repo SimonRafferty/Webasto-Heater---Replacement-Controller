@@ -85,7 +85,7 @@ analogReadResolution(12);
     
         
         //Last_Wat_T = SVWFilter(temp_temp);  //Only feed data to filter once every 5 sec
-        Last_Wat_T = temp_temp;  //Only feed data to filter once every 5 sec
+        //Last_Wat_T = temp_temp;  //Only feed data to filter once every 5 sec
       }
       return Last_Wat_T; 
     }

@@ -6,7 +6,7 @@ void control() {
 //  if (analogRead(push_pin)>250) {
 //    if (digitalRead(push_pin)) {
 
-    if(burn_mode<3) //Don't start if shutting down
+    if ((burn_mode<3) && (Start_Failures < 3)) //Don't start if shutting down or it has failed to start 3 times
     {
       if(water_temp*100 < (heater_min)*100)
       {
@@ -35,8 +35,9 @@ void control() {
     if(burn_mode==0 && seconds>=30) {
       fan_speed = 0;
       burn_fan();
+      Start_Failures = 0;  //Cycle the Ignition line to reset start failures
     }  
-    if(burn_mode==0) water_pump_speed = 0; //Switch off pump if heater has shut down
+    //if(burn_mode==0) water_pump_speed = 0; //Switch off pump if heater has shut down
     if(water_temp > heater_target-15) {
       water_pump_speed = 100;  //Keep pump running if water hot
     } else {

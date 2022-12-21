@@ -37,9 +37,9 @@
 //**BLYNK Defines MUST be before Includes
 //#define BLYNK_DEBUG
 //#define BLYNK_PRINT Serial
-#define BLYNK_TEMPLATE_ID "TMPL_UmX48-O"
-#define BLYNK_DEVICE_NAME "CamperMonitor2"
-#define BLYNK_AUTH_TOKEN "YX8aMU90l5FJAnr-WOTrqfxNjqDkjqh6"
+#define BLYNK_TEMPLATE_ID "Add your template ID here"
+#define BLYNK_DEVICE_NAME "Add your Device name here"
+#define BLYNK_AUTH_TOKEN "Add your Auth Token here"
 //BlynkTimer timer;
 
 #include <math.h> // needed to perform some calculations
@@ -49,8 +49,8 @@
 #include <BlynkSimpleWiFiShield101.h>
 
 
-#define SECRET_SSID "FastWorkshop"
-#define SECRET_PASS "stoatgobbler"
+#define SECRET_SSID "Add your WiFi SSID"
+#define SECRET_PASS "Shhhh...its secret!"
 
 
 //Heater Config 

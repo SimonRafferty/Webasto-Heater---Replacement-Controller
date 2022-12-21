@@ -9,7 +9,7 @@ float running_ratio(float exhaust_temp) {
 
   fuel_current = fuel_need*100;
   
-  if(exhaust_temp > 40)
+  if(exhaust_temp > flame_threshold)
   {    
     
    

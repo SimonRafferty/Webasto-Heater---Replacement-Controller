@@ -15,9 +15,9 @@ float temp_temp = 0;
 analogReadResolution(12);
 
     if(temp_pin == exhaust_temp_pin) {
-      //temp_temp = digitalSmooth(Flame_Temp(), ExhaustSmoothArray);
-      temp_temp = Flame_Temp();
-      if(Last_Exh_T == 0) Last_Exh_T = temp_temp;
+      temp_temp = digitalSmooth(Flame_Temp(), ExhaustSmoothArray);
+      //temp_temp = Flame_Temp();
+      
       if(millis() - GWTLast_Sec > 1000 ) {
         GWTLast_Sec = millis();
     

@@ -55,6 +55,8 @@ float Flame_Temp() {
   //Glow plugs heat to about 1300C apparently.  Using this as the temperature at 1.6 Ohm and assuming it's linear
   //return ((1300.0 - 25.0) / (1.6 - 0.342) * (Glow_Ohms - 0.317)/2);
   Flame_Last = ((1300.0 - 25.0) / (1.6 - 0.342) * (Glow_Ohms - 0.40)/2);
+  //Unfortunately, it seems the reading from the ACS711 current sensor is temperature dependent.  However, this calculation should correct it mostly
+  Flame_Last = water_temp / 1.48 + Flame_Last;
   return Flame_Last;
   
   //In practice, it doesn't have to be spot on, just enough to tell if we ave a flame or not

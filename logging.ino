@@ -1,6 +1,7 @@
 void logging(int ignit_fail, float temp_init, int seconds){
     // print all the interesting data
-    Blynk_Send();
+    if(((float)seconds/10.0) == (int)(seconds/10.0)) Blynk_Send();
+    
     //New debug variables 
     Serial.print(" | BTN: ");
     Serial.print(heater_on);
@@ -88,6 +89,8 @@ void Blynk_Send(){
     Blynk.virtualWrite(V45, fuel_need);
     Blynk.virtualWrite(V46, glow_left);
     Blynk.virtualWrite(V47, seconds);
+    float water_percentage = (100.00/255.00) * debug_water_percent_map;
+    Blynk.virtualWrite(V48, water_percentage);
     
   
     //Serial.println("Blynk Data Sent");

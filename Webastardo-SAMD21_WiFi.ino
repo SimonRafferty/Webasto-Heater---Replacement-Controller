@@ -31,16 +31,16 @@
 // If you prefer the excitement of waiting for it to catch fire, you can always bridge the 
 // contacts with a bit of wire.
 //
-// Simon Rafferty SimonSFX@Outlook.com 2020
+// Simon Rafferty SimonSFX@Outlook.com 2022
 //*********************************************************************************************
 
 //**BLYNK Defines MUST be before Includes
 //#define BLYNK_DEBUG
 //#define BLYNK_PRINT Serial
-#define BLYNK_TEMPLATE_ID "Add your template ID here"
-#define BLYNK_DEVICE_NAME "Add your Device name here"
-#define BLYNK_AUTH_TOKEN "Add your Auth Token here"
-//BlynkTimer timer;
+#define BLYNK_TEMPLATE_ID "TMPL8IdBmJHX"
+#define BLYNK_DEVICE_NAME "Office Heating"
+#define BLYNK_AUTH_TOKEN "DVzrKUvjpXtNhGXqypvUlngE4E4gIXAl"
+
 
 #include <math.h> // needed to perform some calculations
 #include <SPI.h>
@@ -49,17 +49,19 @@
 #include <BlynkSimpleWiFiShield101.h>
 
 
-#define SECRET_SSID "Add your WiFi SSID"
-#define SECRET_PASS "Shhhh...its secret!"
+#define SECRET_SSID "FastWorkshop"
+#define SECRET_PASS "stoatgobbler"
 
 
 //Heater Config 
 //*********************************************************************************
 //**Change these values to suit your application **
 int heater_min = 55; // Increase fuel if below
-int heater_target = 65; // degrees C Decrease fuel if above, increase if below.
-int water_warning = 75;// degrees C - At this temperature, the heater idles
+int heater_target = 60; // degrees C Decrease fuel if above, increase if below.
+int water_warning = 70;// degrees C - At this temperature, the heater idles
 int water_overheat = 85;// degrees C - This is the temperature the heater will shut down
+
+int flame_threshold = 75; //Exhaust temperature above which we assume it's alight
 
 //Fuel Mixture
 //If you find the exhaust is smokey, increase the fan or reduce the fuel
@@ -91,7 +93,7 @@ float throttling_idle_fan = 30;
 //If you get no fuel (pump not clicking) increase this number
 //Values 22,30 or 60 seem to work in most cases.
 
-int pump_size = 60; //22,30,60 
+int pump_size = 22; //22,30,60 
 //**********************************************************************************
  
 //Prime

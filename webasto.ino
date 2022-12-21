@@ -103,7 +103,8 @@ static int cooled_off = 0;
         if(seconds >= 6 && seconds <= 9)
         {
           fan_speed = 15;
-          fuel_need = prime_ratio(exhaust_temp);
+          //fuel_need = prime_ratio(exhaust_temp);
+          fuel_need = prime_ratio(water_temp); //Can't trust exhaust temp from Flame Sensor
           message = "Prime";
         }
 
@@ -143,7 +144,7 @@ static int cooled_off = 0;
 
         //if (((exhaust_temp - temp_init) > 15) && (seconds >=50)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
         //if (((exhaust_temp - temp_init) > 15) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
-        if ((exhaust_temp > 100) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+        if ((exhaust_temp > flame_threshold) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
           burn_mode = 2; // go to main burning mode and initialize variables
           seconds = 0;
           glow_time = 0;
@@ -222,7 +223,7 @@ static int cooled_off = 0;
         //If, after 240s running, the exhaust temp drops below the water temp, the flame must have died.
         //After much experimentation, this seems the most reliable determinant. 
         //if (exhaust_temp  < water_temp && seconds >= 240) { // flame has died
-          if (exhaust_temp  < 100 && seconds >= 240) { //Using flame sensor - temperature reading inaccurate
+          if (exhaust_temp  < flame_threshold && seconds >= 240) { //Using flame sensor - temperature reading inaccurate
           burn = 0;
           seconds = 0;
           burn_mode = 3;

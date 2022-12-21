@@ -1,6 +1,6 @@
 void logging(int ignit_fail, float temp_init, int seconds){
     // print all the interesting data
-
+    Blynk_Send();
     //New debug variables 
     Serial.print(" | BTN: ");
     Serial.print(heater_on);
@@ -42,6 +42,9 @@ void logging(int ignit_fail, float temp_init, int seconds){
     Serial.print(exhaust_temp);
     //Serial.print(" | E_Raw: ");
     //Serial.print(rawDataExhaust);
+    Serial.print(" | E_Flame: ");
+    Serial.print(Flame_Temp());
+    
     if(burn_mode == 1)
     {
       //Serial.print("/");
@@ -69,5 +72,27 @@ void logging(int ignit_fail, float temp_init, int seconds){
     Serial.println(message); 
 
 
+
+}
+
+void Blynk_Send(){
+//Called periodically by Blynk Timer
+
+  if(Blynk.connected()) {
+    //Serial.println("Blynk Connected");
+    Blynk.virtualWrite(V40, burn_mode);
+    Blynk.virtualWrite(V41, Start_Failures);
+    Blynk.virtualWrite(V42, water_temp);
+    Blynk.virtualWrite(V43, exhaust_temp);
+    Blynk.virtualWrite(V44, fan_speed);
+    Blynk.virtualWrite(V45, fuel_need);
+    Blynk.virtualWrite(V46, glow_left);
+    Blynk.virtualWrite(V47, seconds);
+    
+  
+    //Serial.println("Blynk Data Sent");
+  }  else {
+    Serial.println("Blynk FAILED!");
+  }
 
 }

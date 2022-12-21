@@ -13,6 +13,8 @@ static int cooled_off = 0;
   if (millis() > timer + 1000) { // every seconds, run this
     timer = millis();
     seconds ++; // increment the seconds counter
+    //Only log to serial port when WiFi Logging inactive
+    //if(!WiFiACTIVE) logging(Ignition_Failures, temp_init, seconds);
     logging(Ignition_Failures, temp_init, seconds);
   }
   if (!webasto_fail) { // if everything's going fine
@@ -140,7 +142,8 @@ static int cooled_off = 0;
         }
 
         //if (((exhaust_temp - temp_init) > 15) && (seconds >=50)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
-        if (((exhaust_temp - temp_init) > 15) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+        //if (((exhaust_temp - temp_init) > 15) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+        if ((exhaust_temp > 100) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
           burn_mode = 2; // go to main burning mode and initialize variables
           seconds = 0;
           glow_time = 0;
@@ -163,13 +166,6 @@ static int cooled_off = 0;
         }
 
 
-        if ((exhaust_temp < (temp_init-5.0)) && (seconds >= 120) && (burn_mode == 1)) { // if flame died during burn
-          burn_mode = 3;
-          seconds = 0;
-          Start_Failures ++;
-          cooled_off = 1;
-          message = "Flameout";
-        }
 
       } break;
 
@@ -225,7 +221,8 @@ static int cooled_off = 0;
 
         //If, after 240s running, the exhaust temp drops below the water temp, the flame must have died.
         //After much experimentation, this seems the most reliable determinant. 
-        if (exhaust_temp  < water_temp && seconds >= 240) { // flame has died
+        //if (exhaust_temp  < water_temp && seconds >= 240) { // flame has died
+          if (exhaust_temp  < 100 && seconds >= 240) { //Using flame sensor - temperature reading inaccurate
           burn = 0;
           seconds = 0;
           burn_mode = 3;
@@ -263,7 +260,7 @@ static int cooled_off = 0;
           glow_time = 60;
           water_pump_speed = 100;          
         }
-        if (exhaust_temp < water_temp) {  //Wait until exhaust cools below water temp
+        if (seconds>120) {  //Wait until exhaust cools below water temp
           burn_mode = 0;
           message = "Off";
           glow_time = 0;

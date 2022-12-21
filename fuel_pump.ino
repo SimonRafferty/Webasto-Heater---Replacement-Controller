@@ -11,7 +11,9 @@ void fuel_pump() {
 
   int pulse_length = 9;
 
-  if(pump_size == 22)
+  if(pump_size == 0)
+    pulse_length = 2;  //This is a special case for James's silent fuel pump jamesbrowningsmith@yahoo.co.uk
+  else if(pump_size == 22)
     pulse_length = 9;
   else if(pump_size == 33)
     pulse_length = 18;

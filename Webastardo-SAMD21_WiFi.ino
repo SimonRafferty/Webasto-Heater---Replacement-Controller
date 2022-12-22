@@ -50,17 +50,17 @@
 
 #ifdef BLYNK_ENABLE
   //**BLYNK Defines MUST be before Includes
-  #define BLYNK_TEMPLATE_ID "TMPL8IdBmJHX"
-  #define BLYNK_DEVICE_NAME "Office Heating"
-  #define BLYNK_AUTH_TOKEN "DVzrKUvjpXtNhGXqypvUlngE4E4gIXAl"
+  #define BLYNK_TEMPLATE_ID "Add your own Blynk Template ID"
+  #define BLYNK_DEVICE_NAME "Add your own Blynk Device Name"
+  #define BLYNK_AUTH_TOKEN "Add your own Blynk Auth Token"
 #endif
 
 #include <math.h> // needed to perform some calculations
 #ifdef M0_WIFI_ENABLE
   #include <SPI.h>
   #include <WiFi101.h>
-  #define SECRET_SSID "FastWorkshop"
-  #define SECRET_PASS "stoatgobbler"
+  #define SECRET_SSID "Add your own WiFi SSID"
+  #define SECRET_PASS "Add your own Password - Shhhh don't tell anyone!"
 #endif
 
 #ifdef BLYNK_ENABLE

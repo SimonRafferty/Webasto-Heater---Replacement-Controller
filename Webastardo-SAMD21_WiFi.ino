@@ -34,24 +34,40 @@
 // Simon Rafferty SimonSFX@Outlook.com 2022
 //*********************************************************************************************
 
-//**BLYNK Defines MUST be before Includes
-//#define BLYNK_DEBUG
-//#define BLYNK_PRINT Serial
-#define BLYNK_TEMPLATE_ID "TMPL8IdBmJHX"
-#define BLYNK_DEVICE_NAME "Office Heating"
-#define BLYNK_AUTH_TOKEN "DVzrKUvjpXtNhGXqypvUlngE4E4gIXAl"
+//Build options
+#define BLYNK_ENABLE              //Uncomment if you want to send data to Blynk (only applies to M0 WiFi board)
+#define FLAME_SENSOR_ENABLE       //Uncomment if using V3.0 board with ACS711 Current Sensor
+#define M0_WIFI_ENABLE            //Uncomment if you are using a Feather M0 WiFi microcontroller
+//With all three commented out, project will compile the same as the main branch
 
+//This bit just avoids the situation of enabling blynk, without Wifi - which would be a bit dumb huh?  Can't imagine anyone would do that?? ;-)
+#ifdef BLYNK_ENABLE
+  #ifndef M0_WIFI_ENABLE
+    #define M0_WIFI_ENABLE
+  #endif
+#endif
+
+
+#ifdef BLYNK_ENABLE
+  //**BLYNK Defines MUST be before Includes
+  #define BLYNK_TEMPLATE_ID "TMPL8IdBmJHX"
+  #define BLYNK_DEVICE_NAME "Office Heating"
+  #define BLYNK_AUTH_TOKEN "DVzrKUvjpXtNhGXqypvUlngE4E4gIXAl"
+#endif
 
 #include <math.h> // needed to perform some calculations
-#include <SPI.h>
-#include <WiFi101.h>
-//#include <WiFiMDNSResponder.h>
-#include <BlynkSimpleWiFiShield101.h>
+#ifdef M0_WIFI_ENABLE
+  #include <SPI.h>
+  #include <WiFi101.h>
+  #define SECRET_SSID "FastWorkshop"
+  #define SECRET_PASS "stoatgobbler"
+#endif
 
-
-#define SECRET_SSID "FastWorkshop"
-#define SECRET_PASS "stoatgobbler"
-
+#ifdef BLYNK_ENABLE
+  #include <BlynkSimpleWiFiShield101.h>
+#else
+  #include <WiFiMDNSResponder.h>
+#endif
 
 //Heater Config 
 //*********************************************************************************
@@ -100,6 +116,7 @@ int pump_size = 22; //22,30,60
 float prime_low_temp = -10; //Exhaust temp inaccurate at low temp. -10 is approx 10C
 //float prime_low_temp = 4; //Wasn't always starting cold, increase fueling a bit
 float prime_high_temp = 20;
+bool Fuel_Purge = false; //Set by blynk.  Delivers fuel rapidly without running anything else
 
 float prime_fan_speed = 15;
 float prime_low_temp_fuelrate = 3.5;
@@ -135,27 +152,30 @@ int BlynkHeaterOn = 0;
 int BlynkPurgeFuel = 0;
 
 
-/*
-//WiFi Setup
-//#include "Arduino_Secrets" 
-char ssid[] = SECRET_SSID;    // your network SSID (name)
-char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
-int keyIndex = 0;             // your network key Index number (needed only for WEP)
-bool WiFiACTIVE = false;
-WiFiClient client;
+#ifndef BLYNK_ENABLE
+  #ifdef M0_WIFI_ENABLE //Setup web server if this is a wifi board and blynk not selected.
 
-char mdnsName[] = "webastardo"; // the MDNS name that the board will respond to
-// Note that the actual MDNS name will have '.local' after
-// the name above, so "webastardo" will be accessible on
-// the MDNS name "webastardo.local".
-
-int status = WL_IDLE_STATUS;
-
-// Create a MDNS responder to listen and respond to MDNS name requests.
-WiFiMDNSResponder mdnsResponder;
-
-WiFiServer server(80);
-*/
+    //WiFi Setup
+    //#include "Arduino_Secrets" 
+    char ssid[] = SECRET_SSID;    // your network SSID (name)
+    char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
+    int keyIndex = 0;             // your network key Index number (needed only for WEP)
+    bool WiFiACTIVE = false;
+    WiFiClient client;
+    
+    char mdnsName[] = "webastardo"; // the MDNS name that the board will respond to
+    // Note that the actual MDNS name will have '.local' after
+    // the name above, so "webastardo" will be accessible on
+    // the MDNS name "webastardo.local".
+    
+    int status = WL_IDLE_STATUS;
+    
+    // Create a MDNS responder to listen and respond to MDNS name requests.
+    WiFiMDNSResponder mdnsResponder;
+    
+    WiFiServer server(80);
+  #endif
+#endif
 
 
 //Temperature Filtering
@@ -226,9 +246,13 @@ const int air_channel = 2;
 void setup() {
   Serial.begin(115200);
   delay(2000);
+#ifdef M0_WIFI_ENABLE
   //Config pins for Adafruit M0 Wifi
   WiFi.setPins(8, 7, 4, 2);
+#endif
+#ifdef BLYNK_ENABLE
   Serial.println("Connect to Blynk");
+
   Blynk.begin(BLYNK_AUTH_TOKEN, SECRET_SSID, SECRET_PASS);
   delay(1000);
   while(!Blynk.connected()) {
@@ -237,7 +261,7 @@ void setup() {
     delay(1000);
   }
   Serial.println("Blynk Connected");
-
+#endif
   
   pinMode(glow_plug_pin, OUTPUT);
   pinMode(fuel_pump_pin, OUTPUT);
@@ -271,36 +295,41 @@ void setup() {
 
   analogReadResolution(12);
 
-/*
-  // attempt to connect to WiFi network:
-  while ( status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to SSID: ");
-    Serial.println(ssid);
-    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
-    status = WiFi.begin(ssid, pass);
 
-    // wait 5 seconds for connection:
-    delay(5000);
-  }
-  // you're connected now, so print out the status:
-  printWiFiStatus();
 
-  server.begin();
+#ifdef M0_WIFI_ENABLE
+  #ifndef BLYNK_ENABLE
+
+    // attempt to connect to WiFi network:
+    while ( status != WL_CONNECTED) {
+      Serial.print("Attempting to connect to SSID: ");
+      Serial.println(ssid);
+      // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
+      status = WiFi.begin(ssid, pass);
   
+      // wait 5 seconds for connection:
+      delay(5000);
+    }
+    // you're connected now, so print out the status:
+    printWiFiStatus();
+  
+    server.begin();
+    
+  
+    // Setup the MDNS responder to listen to the configured name.
+    // NOTE: You _must_ call this _after_ connecting to the WiFi network and
+    // being assigned an IP address.
+    if (!mdnsResponder.begin(mdnsName)) {
+      Serial.println("Failed to start MDNS responder!");
+      while(1);
+    }
+  
+    Serial.print("Server listening at http://");
+    Serial.print(mdnsName);
+    Serial.println(".local/");  
+  #endif
+#endif
 
-  // Setup the MDNS responder to listen to the configured name.
-  // NOTE: You _must_ call this _after_ connecting to the WiFi network and
-  // being assigned an IP address.
-  if (!mdnsResponder.begin(mdnsName)) {
-    Serial.println("Failed to start MDNS responder!");
-    while(1);
-  }
-
-  Serial.print("Server listening at http://");
-  Serial.print(mdnsName);
-  Serial.println(".local/");  
-
-*/
 
   
 }
@@ -310,38 +339,63 @@ void loop() { // runs over and over again, calling the functions one by one
   temp_data();
   control();
   webasto();
-  Blynk.run();
+  
+#ifdef M0_WIFI_ENABLE
+  #ifdef BLYNK_ENABLE
+    Fuel_Purge_Action();
+    Blynk.run();
+  #else
+    
+    // Call the update() function on the MDNS responder every loop iteration to
+    // make sure it can detect and respond to name requests.
+    mdnsResponder.poll();
+    // listen for incoming clients
+    client = server.available();
+    if (client) {
+      WiFiACTIVE = true;
+      WiFi_Deliver_Content();
+    } else {
+       WiFiACTIVE = false;  //Suspend serial logging
+    }
+  #endif
+#endif
+}
 
-/*  
-  // Call the update() function on the MDNS responder every loop iteration to
-  // make sure it can detect and respond to name requests.
-  mdnsResponder.poll();
-  // listen for incoming clients
-  client = server.available();
-  if (client) {
-    WiFiACTIVE = true;
-    WiFi_Deliver_Content();
-  } else {
-     WiFiACTIVE = false;  //Suspend serial logging
+void Fuel_Purge_Action() {
+//If it's safe to do so (heater & glow plug switched off), run the fuel pump rapidly to purge air
+  if(!heater_on && !debug_glow_plug_on) {
+    if(Fuel_Purge) {
+      fuel_need = prime_ratio(prime_low_temp);
+    } else {
+      fuel_need = 0;
+    }
+    
   }
-*/
 }
 
+#ifdef BLYNK_ENABLE
+  BLYNK_WRITE(V51)
+  {
+    //When selected from the Blynk Console, deliver fuel rapidly
+    Fuel_Purge = param.asInt(); // assigning incoming value from pin V1 to a variable
+  }
+#endif
 
-
-void printWiFiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi 101 Shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
-}
+#ifdef M0_WIFI_ENABLE
+  void printWiFiStatus() {
+    // print the SSID of the network you're attached to:
+    Serial.print("SSID: ");
+    Serial.println(WiFi.SSID());
+  
+    // print your WiFi 101 Shield's IP address:
+    IPAddress ip = WiFi.localIP();
+    Serial.print("IP Address: ");
+    Serial.println(ip);
+  
+    // print the received signal strength:
+    long rssi = WiFi.RSSI();
+    Serial.print("signal strength (RSSI):");
+    Serial.print(rssi);
+    Serial.println(" dBm");
+  }
+#endif

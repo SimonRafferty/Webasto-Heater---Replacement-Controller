@@ -15,6 +15,8 @@ float temp_temp = 0;
 analogReadResolution(12);
 
     if(temp_pin == exhaust_temp_pin) {
+
+#ifdef FLAME_SENSOR_ENABLE
       temp_temp = digitalSmooth(Flame_Temp(), ExhaustSmoothArray);
       //temp_temp = Flame_Temp();
       
@@ -48,7 +50,7 @@ analogReadResolution(12);
         }
       }
       return Last_Exh_T;
-/*
+#else
       rawDataExhaust = thermistor.read();
       rawDataExhaust = rawDataExhaust/10;
       temp_temp = digitalSmooth(rawDataExhaust, ExhaustSmoothArray);
@@ -58,11 +60,11 @@ analogReadResolution(12);
         //Limit rate of change to Max_Change_Per_Sec
         if(temp_temp<120) {
           //At low temperatures rise fast, fall slow damping
-          if((Last_Exh_T-temp_temp) > Max_Change_Per_Sec) {
+          if((Last_Exh_T-temp_temp) > Max_Change_Per_Sec_Exh) {
             if((temp_temp-Last_Exh_T) > 0) { 
-              Last_Exh_T += Max_Change_Per_Sec;
+              Last_Exh_T += Max_Change_Per_Sec_Exh;
             } else {
-              Last_Exh_T -= Max_Change_Per_Sec;
+              Last_Exh_T -= Max_Change_Per_Sec_Exh;
             }
           } else {
             Last_Exh_T = temp_temp;
@@ -70,11 +72,11 @@ analogReadResolution(12);
 
         } else {
           //At higher temperatures damp temp rise & fall
-          if(abs(Last_Exh_T-temp_temp) > Max_Change_Per_Sec) {
+          if(abs(Last_Exh_T-temp_temp) > Max_Change_Per_Sec_Exh) {
             if((temp_temp-Last_Exh_T) > 0) { 
-              Last_Exh_T += Max_Change_Per_Sec;
+              Last_Exh_T += Max_Change_Per_Sec_Exh;
             } else {
-              Last_Exh_T -= Max_Change_Per_Sec;
+              Last_Exh_T -= Max_Change_Per_Sec_Exh;
             }
           } else {
             Last_Exh_T = temp_temp;
@@ -82,7 +84,8 @@ analogReadResolution(12);
         }
       }
       return Last_Exh_T;
-*/
+#endif
+
     } else {
       rawDataWater = thermistor2.read();
       rawDataWater = rawDataWater/10;

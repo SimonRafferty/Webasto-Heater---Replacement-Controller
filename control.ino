@@ -51,8 +51,10 @@ void control() {
 
 }
 
-BLYNK_WRITE(V50)
-{
-  //When the heater is switched on via the Blynk Console - BlynkHeaterOn changes from 0 to 1
-  BlynkHeaterOn = param.asInt(); // assigning incoming value from pin V1 to a variable
-}
+#ifdef BLYNK_ENABLE
+  BLYNK_WRITE(V50)
+  {
+    //When the heater is switched on via the Blynk Console - BlynkHeaterOn changes from 0 to 1
+    BlynkHeaterOn = param.asInt(); // assigning incoming value from pin V1 to a variable
+  }
+#endif

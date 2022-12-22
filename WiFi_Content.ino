@@ -1,5 +1,7 @@
 void WiFi_Deliver_Content() {
-/*
+#ifndef BLYNK_ENABLE
+  #ifdef M0_WIFI_ENABLE
+
     Serial.println("new client");
     // an HTTP request ends with a blank line
     bool currentLineIsBlank = true;
@@ -71,5 +73,6 @@ void WiFi_Deliver_Content() {
     // close the connection:
     client.stop();
     //Serial.println("client disconnected");
-*/
+  #endif
+#endif
   }

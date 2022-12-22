@@ -8,8 +8,11 @@ This version has some compile time directives at the start of Webastardo-SAMD21_
 #define M0_WIFI_ENABLE            //Uncomment if you are using a Feather M0 WiFi microcontroller
 ```
 If you are using the M0 WiFi controller with a V1 or V2 board, just comment out #define FLAME_SENSOR_ENABLE
+
 If you are using a V3 board with a regular Feather M0 (without WiFi) - comment out #define BLYNK_ENABLE and #define M0_WIFI_ENABLE
+
 If you want to use a web interface rather than Blynk - comment out #define BLYNK_ENABLE
+
 You get the idea!
 
 The V3.0 PCB includes an ACS711 Current sensor in line with the Glow plug.  This is to measure the current & calculate the resistance of the plug.

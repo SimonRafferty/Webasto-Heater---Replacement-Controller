@@ -69,7 +69,7 @@ static int cooled_off = 0;
   switch (burn_mode) {
     case 0: { // everything is turned off in this mode
         fan_speed = 0;
-        fuel_need = 0;
+        if(!Fuel_Purge) fuel_need = 0;
         glow_time = 0;
         lean_burn = 0;
         
@@ -112,7 +112,6 @@ static int cooled_off = 0;
         if(seconds >= 6 && seconds <= 9)
         {
           fan_speed = 15;
-          //fuel_need = prime_ratio(exhaust_temp);
           fuel_need = prime_ratio(water_temp); //Can't trust exhaust temp from Flame Sensor
           message = "Prime";
         }
@@ -214,6 +213,7 @@ static int cooled_off = 0;
           burn = 0;
           burn_mode = 3;
           seconds = 0;
+          restart_timer = restart_delay; //mins before restart following overheat
         }
         
         if(water_temp < 0)  //Probably a thermistor failure
@@ -228,6 +228,7 @@ static int cooled_off = 0;
           burn = 0;
           burn_mode = 3;
           seconds = 0;
+          restart_timer = 0;
         }
 
         //If, after 240s running, the exhaust temp drops below the water temp, the flame must have died.

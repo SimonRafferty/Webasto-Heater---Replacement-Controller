@@ -79,9 +79,8 @@ int pump_size = 60; //22,30,60
 //**********************************************************************************
  
 //Prime
-float prime_low_temp = -10; //Exhaust temp inaccurate at low temp. -10 is approx 10C
-//float prime_low_temp = 4; //Wasn't always starting cold, increase fueling a bit
-float prime_high_temp = 20;
+float prime_low_temp = 10; //If water temp below this value (in Deg C), increase prime fueling for more reliale starting
+float prime_high_temp = 20; //Not used at the moment
 
 float prime_fan_speed = 15;
 float prime_low_temp_fuelrate = 3.5;

@@ -13,6 +13,8 @@ static int cooled_off = 0;
   if (millis() > timer + 1000) { // every seconds, run this
     timer = millis();
     seconds ++; // increment the seconds counter
+    //Only log to serial port when WiFi Logging inactive
+    //if(!WiFiACTIVE) logging(Ignition_Failures, temp_init, seconds);
     logging(Ignition_Failures, temp_init, seconds);
   }
   if (!webasto_fail) { // if everything's going fine
@@ -36,7 +38,7 @@ static int cooled_off = 0;
       Ignition_Failures = 0;
     }
 
-/*
+
     if ((Ignition_Failures > 3) && (burn_mode == 1)) { // if there was more than 3 attempts to start fire but all failed
       webasto_fail = 1;
       ShutdownReason = "i_fail > 3 ";
@@ -44,7 +46,8 @@ static int cooled_off = 0;
       seconds = 0;
       burn = 0;
     }
-*/
+
+#ifndef FLAME_SENSOR_ENABLE  //Flame sensor only indicates flame, not overheat
     if ((exhaust_temp > 350) && (burn_mode != 3)) { // if overheating. Temp sometimes spikes as heater shuts down. This is not a fail.
       message = "Exhaust Overheat";
       Serial.println("############## OVERHEAT ####################");
@@ -53,7 +56,7 @@ static int cooled_off = 0;
       burn_mode = 3;
       burn = 0;
      }
-
+#endif
   } else { // if there has been a major failure, stop everything
     burn = 0;
     burn_mode = 3;
@@ -66,7 +69,7 @@ static int cooled_off = 0;
   switch (burn_mode) {
     case 0: { // everything is turned off in this mode
         fan_speed = 0;
-        fuel_need = 0;
+        if(!Fuel_Purge) fuel_need = 0;
         glow_time = 0;
         lean_burn = 0;
         
@@ -76,8 +79,12 @@ static int cooled_off = 0;
         if(webasto_fail)
           fuel_need = 0;
           
-          
+
+#ifdef FLAME_SENSOR_ENABLE
+        if(exhaust_temp > flame_threshold && (cooled_off == 0 || seconds < 5)) 
+#else
         if(exhaust_temp > 150 && (cooled_off == 0 || seconds < 5))
+#endif
         {
           message = "Cooling < 150";
           fan_speed = 80;
@@ -85,7 +92,11 @@ static int cooled_off = 0;
           seconds = 0;
           cooled_off = 0;
         }
+#ifdef FLAME_SENSOR_ENABLE
+        else if(exhaust_temp <= flame_threshold)
+#else
         else if(exhaust_temp <= 150)
+#endif
           cooled_off = 1;
         
         if(seconds > 0 && seconds < 5)
@@ -101,7 +112,7 @@ static int cooled_off = 0;
         if(seconds >= 6 && seconds <= 9)
         {
           fan_speed = 15;
-          fuel_need = prime_ratio(exhaust_temp);
+          fuel_need = prime_ratio(water_temp); //Can't trust exhaust temp from Flame Sensor
           message = "Prime";
         }
 
@@ -138,9 +149,11 @@ static int cooled_off = 0;
           else
             fan_speed = start_fan_speed; // get some more air and restart pumping fuel slowly        
         }
-
-        //if (((exhaust_temp - temp_init) > 15) && (seconds >=50)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+#ifndef FLAME_SENSOR_ENABLE
         if (((exhaust_temp - temp_init) > 15) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+#else
+        if ((exhaust_temp > flame_threshold) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+#endif
           burn_mode = 2; // go to main burning mode and initialize variables
           seconds = 0;
           glow_time = 0;
@@ -163,13 +176,6 @@ static int cooled_off = 0;
         }
 
 
-        if ((exhaust_temp < (temp_init-5.0)) && (seconds >= 120) && (burn_mode == 1)) { // if flame died during burn
-          burn_mode = 3;
-          seconds = 0;
-          Start_Failures ++;
-          cooled_off = 1;
-          message = "Flameout";
-        }
 
       } break;
 
@@ -207,6 +213,7 @@ static int cooled_off = 0;
           burn = 0;
           burn_mode = 3;
           seconds = 0;
+          restart_timer = restart_delay; //mins before restart following overheat
         }
         
         if(water_temp < 0)  //Probably a thermistor failure
@@ -221,11 +228,16 @@ static int cooled_off = 0;
           burn = 0;
           burn_mode = 3;
           seconds = 0;
+          restart_timer = 0;
         }
 
         //If, after 240s running, the exhaust temp drops below the water temp, the flame must have died.
         //After much experimentation, this seems the most reliable determinant. 
+#ifndef FLAME_SENSOR_ENABLE
         if (exhaust_temp  < water_temp && seconds >= 240) { // flame has died
+#else
+        if (exhaust_temp  < flame_threshold && seconds >= 240) { //Using flame sensor - temperature reading inaccurate
+#endif          
           burn = 0;
           seconds = 0;
           burn_mode = 3;
@@ -251,7 +263,11 @@ static int cooled_off = 0;
         fuel_need = 0;
         EX_Mute = false;
         message = "Shut Down" + ShutdownReason;
+#ifndef FLAME_SENSOR_ENABLE
         if (seconds > 60 || exhaust_temp < 100) {
+#else
+        if (seconds > 60 || exhaust_temp < flame_threshold) {
+#endif
           fan_speed = 40;
           message = "Final-Cool";
           glow_time = 0;
@@ -263,7 +279,7 @@ static int cooled_off = 0;
           glow_time = 60;
           water_pump_speed = 100;          
         }
-        if (exhaust_temp < water_temp) {  //Wait until exhaust cools below water temp
+        if (seconds>120) {  //Wait until exhaust cools below water temp
           burn_mode = 0;
           message = "Off";
           glow_time = 0;

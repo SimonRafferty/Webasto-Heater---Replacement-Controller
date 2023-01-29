@@ -113,9 +113,8 @@ int pump_size = 22; //22,30,60
 //**********************************************************************************
  
 //Prime
-float prime_low_temp = -10; //Exhaust temp inaccurate at low temp. -10 is approx 10C
-//float prime_low_temp = 4; //Wasn't always starting cold, increase fueling a bit
-float prime_high_temp = 20;
+float prime_low_temp = 10; //Prime ratio is temperature dependent. Below this temp, prime fueling is increased
+float prime_high_temp = 20; //Not used at the moment
 bool Fuel_Purge = false; //Set by blynk.  Delivers fuel rapidly without running anything else
 
 float prime_fan_speed = 15;

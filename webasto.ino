@@ -6,7 +6,7 @@ static float temp_init;
 static int cooled_off = 0;
 
 
-  if (millis() < timer) {
+  if (millis() < timer) { 
     timer = millis();
   }
 

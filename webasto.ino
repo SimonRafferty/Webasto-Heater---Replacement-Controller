@@ -6,7 +6,7 @@ static float temp_init;
 static int cooled_off = 0;
 
 
-  if (millis() < timer) { 
+  if (millis() < timer) {
     timer = millis();
   }
 
@@ -112,6 +112,7 @@ static int cooled_off = 0;
         if(seconds >= 6 && seconds <= 9)
         {
           fan_speed = 15;
+          //fuel_need = prime_ratio(exhaust_temp);
           fuel_need = prime_ratio(water_temp); //Can't trust exhaust temp from Flame Sensor
           message = "Prime";
         }

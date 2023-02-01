@@ -1,10 +1,18 @@
 #include "thermistor.h"
 
 
+#ifdef FLAME_SENSOR_ENABLE
+//When flame sensor enabled, use Exhaust pin as a room temp sensor (I'm using a 10k thermistor with 10k bias resistor)
+THERMISTOR thermistor(exhaust_temp_pin,        // Analog pin
+                      10000,          // Nominal resistance at 25 ºC
+                      3950,           // thermistor's beta coefficient
+                      9800);         // Value of the series resistor
+#else
 THERMISTOR thermistor(exhaust_temp_pin,        // Analog pin
                       100000,          // Nominal resistance at 25 ºC
                       3950,           // thermistor's beta coefficient
                       4700);         // Value of the series resistor
+#endif
 THERMISTOR thermistor2(water_temp_pin,        // Analog pin
                       10000,          // Nominal resistance at 25 ºC
                       3977,           // thermistor's beta coefficient
@@ -15,28 +23,22 @@ float temp_temp = 0;
 analogReadResolution(12);
 
     if(temp_pin == exhaust_temp_pin) {
-      rawDataExhaust = thermistor.read();
-      rawDataExhaust = rawDataExhaust/10;
-      temp_temp = digitalSmooth(rawDataExhaust, ExhaustSmoothArray);
+
+#ifdef FLAME_SENSOR_ENABLE
+      temp_temp = digitalSmooth(Flame_Temp(), ExhaustSmoothArray);
+      //temp_temp = Flame_Temp();
+      
       if(millis() - GWTLast_Sec > 1000 ) {
         GWTLast_Sec = millis();
     
-    /*
-        //When the fan speed is changing, it sometimes affects the temp readings.  Mute changes when
-        if((EX_Mute == false) && (temp_temp > 0)) {
-          Last_Mute_T = temp_temp;
-        } else {
-          temp_temp = Last_Mute_T;
-        }
-    */
         //Limit rate of change to Max_Change_Per_Sec
-        if(temp_temp<120) {
+        if(temp_temp<-120) {
           //At low temperatures rise fast, fall slow damping
-          if((Last_Exh_T-temp_temp) > Max_Change_Per_Sec) {
+          if((Last_Exh_T-temp_temp) > Max_Change_Per_Sec_Exh) {
             if((temp_temp-Last_Exh_T) > 0) { 
-              Last_Exh_T += Max_Change_Per_Sec;
+              Last_Exh_T += Max_Change_Per_Sec_Exh;
             } else {
-              Last_Exh_T -= Max_Change_Per_Sec;
+              Last_Exh_T -= Max_Change_Per_Sec_Exh;
             }
           } else {
             Last_Exh_T = temp_temp;
@@ -44,11 +46,52 @@ analogReadResolution(12);
 
         } else {
           //At higher temperatures damp temp rise & fall
-          if(abs(Last_Exh_T-temp_temp) > Max_Change_Per_Sec) {
+          if(abs(Last_Exh_T-temp_temp) > Max_Change_Per_Sec_Exh) {
             if((temp_temp-Last_Exh_T) > 0) { 
-              Last_Exh_T += Max_Change_Per_Sec;
+              Last_Exh_T += Max_Change_Per_Sec_Exh;
             } else {
-              Last_Exh_T -= Max_Change_Per_Sec;
+              Last_Exh_T -= Max_Change_Per_Sec_Exh;
+            }
+          } else {
+            Last_Exh_T = temp_temp;
+          }
+        }
+      }
+      //Get room temperature data
+      room_temp = digitalSmooth(thermistor.read(), RoomSmoothArray);
+
+      //room_temp = analogRead(exhaust_temp_pin);
+      room_temp = room_temp / 10;
+
+      return Last_Exh_T;
+
+#else
+      rawDataExhaust = thermistor.read();
+      rawDataExhaust = rawDataExhaust/10;
+      temp_temp = digitalSmooth(rawDataExhaust, ExhaustSmoothArray);
+      if(millis() - GWTLast_Sec > 1000 ) {
+        GWTLast_Sec = millis();
+    
+        //Limit rate of change to Max_Change_Per_Sec
+        if(temp_temp<120) {
+          //At low temperatures rise fast, fall slow damping
+          if((Last_Exh_T-temp_temp) > Max_Change_Per_Sec_Exh) {
+            if((temp_temp-Last_Exh_T) > 0) { 
+              Last_Exh_T += Max_Change_Per_Sec_Exh;
+            } else {
+              Last_Exh_T -= Max_Change_Per_Sec_Exh;
+            }
+          } else {
+            Last_Exh_T = temp_temp;
+          }
+
+        } else {
+          //At higher temperatures damp temp rise & fall
+          if(abs(Last_Exh_T-temp_temp) > Max_Change_Per_Sec_Exh) {
+            if((temp_temp-Last_Exh_T) > 0) { 
+              Last_Exh_T += Max_Change_Per_Sec_Exh;
+            } else {
+              Last_Exh_T -= Max_Change_Per_Sec_Exh;
             }
           } else {
             Last_Exh_T = temp_temp;
@@ -56,6 +99,7 @@ analogReadResolution(12);
         }
       }
       return Last_Exh_T;
+#endif
 
     } else {
       rawDataWater = thermistor2.read();
@@ -70,13 +114,13 @@ analogReadResolution(12);
         temp_temp = rawDataWater;
     
     
-        //Limit the rate the read temperature is allowed to fall
-        if((Last_Wat_T - temp_temp) > Max_Change_Per_Sec) {
+        //Limit the rate the rate temperature is allowed to fall
+        if((Last_Wat_T - temp_temp) > Max_Change_Per_Sec_Wat) {
           
           if((temp_temp-Last_Wat_T) > 0) { 
-            Last_Wat_T += Max_Change_Per_Sec;
+            Last_Wat_T += Max_Change_Per_Sec_Wat;
           } else {
-            Last_Wat_T -= Max_Change_Per_Sec;
+            Last_Wat_T -= Max_Change_Per_Sec_Wat;
           }
         } else {
           Last_Wat_T = temp_temp;
@@ -100,6 +144,9 @@ float ExhaustSmoothArray [filterSamples];   // array for holding raw sensor valu
 */
 
 float digitalSmooth(float rawIn, float *sensSmoothArray){     // "int *sensSmoothArray" passes an array to the function - the asterisk indicates the array name is a pointer
+//This is what's known as a Median Filter.  It's good for values with noise spikes where they are centred on the correct one, but there are 
+//widely fluctuating exceptional values (spikes).  The filter sorts the last few results then discards the top & bottom 15% and returns the middle / median value of what remains
+  
   int j, k, temp, top, bottom;
   long total;
   static int i;

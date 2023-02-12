@@ -61,12 +61,11 @@
   #include <WiFi101.h>
   #define SECRET_SSID "FastWorkshop"
   #define SECRET_PASS "stoatgobbler"
+  #include <WiFiMDNSResponder.h>
 #endif
 
 #ifdef BLYNK_ENABLE
   #include <BlynkSimpleWiFiShield101.h>
-#else
-  #include <WiFiMDNSResponder.h>
 #endif
 
 //Heater Config 

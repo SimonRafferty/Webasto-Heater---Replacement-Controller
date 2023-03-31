@@ -152,7 +152,8 @@ static int cooled_off = 0;
 #ifndef FLAME_SENSOR_ENABLE
         if (((exhaust_temp - temp_init) > 15) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
 #else
-        if ((exhaust_temp > flame_threshold) && (seconds >=80)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+        if ((exhaust_temp > flame_threshold) && (seconds >=120)) { // exhaust temp raised a bit meaning fire has started //Debug this value of 0.5c is way too low maybe change it to 5c
+          //Changed from 80 t 120 as glow plug is still hot from startup.  120s needed for it to cool if no flame
 #endif
           burn_mode = 2; // go to main burning mode and initialize variables
           seconds = 0;
@@ -165,7 +166,7 @@ static int cooled_off = 0;
         }
 
         //Allow a max 100s for exhaust temperature to rise
-        if ((seconds > 100) && (burn_mode == 1)) {
+        if ((seconds > 140) && (burn_mode == 1)) {
           // the fire sequence didn't work, give it an other try
           burn_mode = 3;
           seconds = 0;
@@ -236,7 +237,8 @@ static int cooled_off = 0;
 #ifndef FLAME_SENSOR_ENABLE
         if (exhaust_temp  < water_temp && seconds >= 240) { // flame has died
 #else
-        if (exhaust_temp  < flame_threshold && seconds >= 240) { //Using flame sensor - temperature reading inaccurate
+        if (exhaust_temp  < flame_threshold && seconds >= 60) { //Using flame sensor - temperature reading inaccurate
+          //Changed from 240s to 60s as it doesn't take that long to see if there is combustion 
 #endif          
           burn = 0;
           seconds = 0;

@@ -51,7 +51,7 @@
 #ifdef BLYNK_ENABLE
   //**BLYNK Defines MUST be before Includes
   #define BLYNK_TEMPLATE_ID "Add your own Blynk Template ID"
-  #define BLYNK_DEVICE_NAME "Add your own Blynk Device Name"
+  #define BLYNK_TEMPLATE_NAME "Add your own Blynk Device Name"
   #define BLYNK_AUTH_TOKEN "Add your own Blynk Auth Token"
 #endif
 

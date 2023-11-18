@@ -1,0 +1,106 @@
+title: Office Heating
+views:
+  - path: default_view
+    title: Office Heating
+    cards:
+      - type: entity
+        entity: number.office_heating_run_time
+        name: Heater Run Time
+        unit: S
+      - type: entity
+        entity: number.office_heating_glow_time
+        name: Remaining Glow Time
+        unit: S
+      - type: entities
+        entities:
+          - entity: switch.office_heating_purge_fuel_line
+            name: Purge Fuel Line
+          - entity: switch.office_heating_run_heater
+            name: Run Heater
+          - entity: number.office_heating_target_room_temp
+            name: Target Room Temp
+        title: Office Heating
+        show_header_toggle: false
+      - square: false
+        type: grid
+        cards:
+          - type: gauge
+            entity: number.office_heating_current_room_temp
+            min: -10
+            max: 60
+            needle: true
+            name: Current Room Temp
+            unit: C
+            severity:
+              green: 20
+              yellow: 24
+              red: 30
+          - type: gauge
+            entity: number.office_heating_water_temp
+            name: Water Temp
+            unit: C
+            min: 0
+            max: 100
+            needle: true
+            severity:
+              green: 55
+              yellow: 75
+              red: 85
+          - type: gauge
+            entity: number.office_heating_flame_temp
+            name: Flame Reading
+            unit: Thalms
+            min: 0
+            max: 250
+            needle: true
+            severity:
+              green: 0
+              yellow: 1
+              red: 90
+          - type: gauge
+            entity: number.office_heating_combustion_fan
+            name: Combustion Fan
+            unit: '%'
+            needle: true
+          - type: gauge
+            entity: number.office_heating_fuel_hz
+            name: Fuel Pump
+            unit: ppm
+            needle: true
+            min: 0
+            max: 300
+            severity:
+              green: -1
+              yellow: 100
+              red: 200
+          - type: gauge
+            entity: number.office_heating_water_pump
+            min: 0
+            max: 100
+            unit: '%'
+            name: Water Pump
+            needle: true
+            severity:
+              green: 0
+              yellow: 116
+              red: 50
+        columns: 2
+      - type: custom:mini-graph-card
+        name: Office Temperatures
+        hours_to_show: 12
+        entities:
+          - entity: number.office_heating_current_room_temp
+            name: Office
+            unit: °C
+          - entity: sensor.openweathermap_temperature
+            name: Outdoor
+            unit: °C
+        show:
+          labels: false
+          labels_secondary: false
+          name: true
+          legend: true
+          icon: true
+        points_per_hour: 6
+        update_interval: 5
+        height: 300

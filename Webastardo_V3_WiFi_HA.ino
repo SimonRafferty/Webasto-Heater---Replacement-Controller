@@ -360,7 +360,7 @@ void Fuel_Purge_Action() {
 //*******************************************************************************************
 void HASetup(){
 //This defines all the controls which will be used in Home Assistant
-//The controls will magically appear in the HA UI (look in Devices for "Webastardo")
+//The controls will magically appear in the HA UI (look in Devices for "Office Heating")
   // This is the name of the MQTT Device which will appear in HA (Magically!)
   device.setName("Office Heating");
   device.setSoftwareVersion("3.2");

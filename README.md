@@ -1,7 +1,16 @@
 # Webasto-Heater---Replacement-Controller
-An Arduino M0 based controller for Webasto C/E Diesel Water Heaters
+An Arduino M0 WiFi based controller for Webasto C/E Diesel Water Heaters with Home Assistant integration via MQTT
 
 PCB here: https://oshwlab.com/SimonRafferty/webasto-controller
+
+# Home Assistant Setup
+You need to configure an MQTT Broker within HA.  I'm using Mosquito but any should work.  There are plenty of on-line tutorials available
+
+You will need to enter the details (host, User, Password) in the main Webastardo module, along with your WiFi SSID & Password.
+
+The program will set up a number of new entities for sensor data plus two switches.  One switch rapidly pulses the fuel pump which you can use to purge fuel lines
+The second starts the heater.  I have a thermistor connected to Pin 3 measuring the room temperature.  The heater will run until the taget room temperature is reached
+then shut down.  I'm using it to heat my office with the heater plumbed to domestic radiators.
 
 # Important Note:
 If you can, use the original plastic encapsulated thermistor to measure the water temperature.  After market, non encapsulated, thermistors change value when you squash them.  The spring clip which holds the thermistor against the heater body is enough to make the water temperature readings change significantly.

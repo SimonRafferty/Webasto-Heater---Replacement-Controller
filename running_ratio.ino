@@ -1,4 +1,7 @@
-float running_ratio(float exhaust_temp) {
+//*******************************************************************************************
+// Set the air/fuel ratio when the pump is running
+//*******************************************************************************************
+void running_ratio() {
   static unsigned long fuel_change_timer;
   static unsigned long fan_change_timer;
   //Not hot enough to start adjusting
@@ -9,34 +12,41 @@ float running_ratio(float exhaust_temp) {
 
   fuel_current = fuel_need*100;
   
-  if(exhaust_temp > flame_threshold)
+  if(Is_Flame())
   {    
     
-   
+  // Fueling_Level: 0=Off, 1=Idle, 2=Low, 3=Steady, 4=High
+ 
     if(water_temp < heater_min)  { 
       fuel_target = throttling_high_fuel*100;
       fan_target = throttling_high_fan;
+      Fueling_Level = 4;
     } 
     if((water_temp >= heater_min) && (water_temp < heater_target)) {
       fuel_target = throttling_steady_fuel*100;
       fan_target = throttling_steady_fan;
+      Fueling_Level = 3;
     }
 
     if((water_temp >= heater_target) && (water_temp < water_warning)) {
       fuel_target = throttling_low_fuel*100;
       fan_target = throttling_low_fan;
+      Fueling_Level = 2;
     }
 
     if((water_temp >= water_warning) && (water_temp < water_overheat))   {
       fuel_target = throttling_idle_fuel*100;
       fan_target = throttling_idle_fan;
+      Fueling_Level = 1;
     }
 
-    
-    if(exhaust_temp>200) { //Just in case exhaust temp getting too high
+/*
+    //Just in case exhaust temp getting too high
+    if(get_flame_temp()>400) { 
       fuel_target = throttling_idle_fuel*100;
       fan_target = throttling_idle_fan;
     }
+*/
 
 
 
@@ -56,7 +66,7 @@ float running_ratio(float exhaust_temp) {
         {
           if(millis() - fuel_change_timer >= 1500){  //Increase fuel slowly
             fuel_need += 0.01;
-            message = "T Inc Fuel";
+            InfoMessage = "Inc Fuel";
             fuel_change_timer = millis();
           }
         }
@@ -64,18 +74,17 @@ float running_ratio(float exhaust_temp) {
         {
           if(millis() - fuel_change_timer >= 150) {  //Decrease fuel less slowly
             fuel_need -= 0.01;
-            message = "T Dec Fuel";
+            InfoMessage = "Dec Fuel";
             fuel_change_timer = millis();
           }
         }
         
     }
     else
-      message = "T Running";
+      InfoMessage = "Running";
   
 
     //Adjust Fan
-    EX_Mute = false; //Temperature unstable while fan speed changing.  Mute readings during change
     if(fan_target != fan_speed)
     {
         
@@ -84,8 +93,7 @@ float running_ratio(float exhaust_temp) {
         {
           if(millis() - fan_change_timer >= 1500) { //Increase fan slowly
             fan_speed += 0.5;
-            message = "T Inc Fan";
-            EX_Mute = true;
+            //InfoMessage = "T Inc Fan";
             fan_change_timer = millis();
           }
         }
@@ -93,15 +101,12 @@ float running_ratio(float exhaust_temp) {
         {
           if(millis() - fan_change_timer >= 150) { //Decrease fuel less slowly
             fan_speed -= 0.5;
-            message = "T Dec Fan";
-            EX_Mute = true;
+            //InfoMessage = "T Dec Fan";
             fan_change_timer = millis();
           }
         }          
           
     }
-    else
-      message = "T Running";
   }
-  return true;
+  
 }

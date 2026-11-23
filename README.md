@@ -1,6 +1,5 @@
 # Webastardo V5 – Replacement controller for Webasto ThermoTop C / E heaters
 
-## 📱 Phone app
 
 ### **[▶ Open the Webastardo phone app](https://simonrafferty.github.io/Webasto-Heater---Replacement-Controller/)**
 

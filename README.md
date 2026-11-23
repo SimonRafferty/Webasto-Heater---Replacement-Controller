@@ -64,6 +64,9 @@ leaves them out.
 
 ## Building the firmware
 
+> **Work in progress:** the V5 firmware has been tested on a bare ESP32-S3 with simulated sensors,
+> not yet on a real V5 board and heater.
+
 The firmware is in `Webastardo_V5_ESP32/`.
 
 * Arduino IDE 2 with **ESP32 core 3.x** (Espressif), board **ESP32S3 Dev Module**

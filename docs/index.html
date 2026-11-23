@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#000066">
+<title>Webastardo</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!--
+  Webastardo V5 phone app.  Talks to the heater over Bluetooth LE (Web Bluetooth).
+  Everyday controls only - setup & tuning are on the heater's WiFi web page.
+  Works in Chrome on Android (and desktop Chrome).  iPhone: use the Bluefy browser.
+  The GATT protocol is documented in the firmware, ble.ino.
+-->
+<style>
+  body { margin:0; font-family:Arial, sans-serif; font-size:16px; background:#eee; }
+  .container { display:flex; flex-wrap:wrap; padding:6px; max-width:900px; margin:0 auto; }
+  .column { flex-grow:1; flex-basis:50%; min-width:300px; padding:6px; box-sizing:border-box; }
+  table { width:100%; border-collapse:collapse; background:#fff; margin-bottom:10px; }
+  td { border:1px solid #888; padding:7px 8px; text-align:left; }
+  .hdr td { background:#000066; color:#fff; font-weight:bold; font-size:17px; }
+  .hdr.green td { background:#060; }
+  .sub td { background:#ccc; font-weight:bold; }
+  td.lbl { background:#ddd; width:45%; }
+  input[type=number] { width:5em; padding:4px; font-size:17px; }
+  button { font-size:16px; padding:7px 14px; cursor:pointer; }
+  .big { font-size:20px; padding:10px 28px; font-weight:bold; }
+  .on  { background:#3a3; color:#fff; border:1px solid #282; }
+  .off { background:#888; color:#fff; border:1px solid #666; }
+  .warn { color:#b00; font-weight:bold; }
+  .note { font-size:13px; color:#555; }
+  #bar { background:#000066; color:#fff; padding:8px 12px; display:flex; align-items:center; gap:10px; }
+  #bar b { font-size:18px; flex-grow:1; }
+  #connBtn { background:#fff; color:#000066; border:none; border-radius:4px; font-weight:bold; }
+  #state { font-size:13px; }
+  #msg { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#333; color:#fff;
+         padding:10px 18px; border-radius:6px; display:none; max-width:90%; z-index:9; }
+  #errBanner { display:none; background:#b00; color:#fff; padding:10px 14px; font-weight:bold; }
+  #errBanner .txt { white-space:pre-line; font-weight:normal; font-size:17px; margin:6px 0; }
+  #errBanner span { display:block; font-weight:normal; font-size:13px; margin-top:4px; }
+  #d_e { white-space:pre-line; }
+  #help { padding:12px; max-width:860px; margin:0 auto; }
+  .disabled { opacity:.45; pointer-events:none; }
+  .sw { position:relative; display:inline-block; width:50px; height:26px; vertical-align:middle; }
+  .sw input { opacity:0; width:0; height:0; }
+  .sl { position:absolute; inset:0; background:#aaa; border-radius:26px; transition:.2s; cursor:pointer; }
+  .sl:before { content:""; position:absolute; height:20px; width:20px; left:3px; top:3px; background:#fff;
+               border-radius:50%; transition:.2s; }
+  .sw input:checked + .sl { background:#3a3; }
+  .sw input:checked + .sl:before { transform:translateX(24px); }
+</style>
+</head>
+<body>
+<div id="bar"><b>Webastardo</b><span id="state">Not connected</span><button id="connBtn" onclick="connectClick()">Connect</button></div>
+
+<div id="errBanner"></div>
+<div id="help" class="note"></div>
+
+<div class="container disabled" id="main">
+  <div class="column">
+    <table>
+      <tr class="hdr"><td colspan="2">Controls</td></tr>
+      <tr><td class="lbl">Heater is</td>
+          <td><button id="heatBtn" class="big off" onclick="toggleHeater()">OFF</button></td></tr>
+      <tr><td class="lbl">State</td><td id="modeText">-</td></tr>
+      <tr><td colspan="2" id="heatNote" class="note"></td></tr>
+    </table>
+
+    <table>
+      <tr class="hdr"><td colspan="2">Room</td></tr>
+      <tr><td class="lbl">Room temp</td><td id="roomNow">-</td></tr>
+      <tr><td class="lbl">Target</td>
+          <td><button onclick="nudge(-0.5)">&minus;</button>
+              <input type="number" id="room_target" step="0.5" min="5" max="35" onchange="setTarget()">
+              <button onclick="nudge(0.5)">+</button> &deg;C</td></tr>
+      <tr><td class="lbl">Run to Temp</td>
+          <td><label class="sw"><input type="checkbox" id="run_to_temp" onchange="send('run_to_temp=' + (this.checked ? 1 : 0))"><span class="sl"></span></label>
+              <span class="note">&nbsp;switch off at target</span></td></tr>
+      <tr><td colspan="2" id="roomNote" class="note"></td></tr>
+    </table>
+
+    <table>
+      <tr class="hdr"><td colspan="2">Convection Fan</td></tr>
+      <tr><td class="lbl">Manual ON</td>
+          <td><label class="sw"><input type="checkbox" id="fanSw" onchange="send(this.checked ? 'fan_on' : 'fan_off')"><span class="sl"></span></label>
+              &nbsp;Fan is <b id="fanState">-</b></td></tr>
+      <tr><td colspan="2" class="note">Also runs automatically when the water is hot</td></tr>
+    </table>
+
+    <table>
+      <tr class="hdr green"><td colspan="2">Fuel Purge</td></tr>
+      <tr><td class="lbl">Purge is</td>
+          <td><button id="purgeBtn" class="off" onclick="send(S.p ? 'purge_off' : 'purge_on')">OFF</button></td></tr>
+      <tr><td colspan="2" class="note">Runs the pump fast to bleed air.  Heater must be off.  Stops after 2 minutes.</td></tr>
+    </table>
+  </div>
+
+  <div class="column">
+    <table>
+      <tr class="hdr"><td colspan="2">Heater Live Data</td></tr>
+      <tr class="sub"><td colspan="2">Power:</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Hardware On/Off</td><td id="d_h">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Battery</td><td id="d_b">-</td></tr>
+      <tr class="sub"><td colspan="2">Temperatures:</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Room</td><td id="d_rt">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Water</td><td id="d_wt">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Exhaust</td><td id="d_et">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Flame is</td><td id="d_fl">-</td></tr>
+      <tr class="sub"><td colspan="2">Outputs:</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Water Pump</td><td id="d_wp">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Combustion Fan</td><td id="d_fn">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Fuel Pump</td><td id="d_fu">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Glow time remaining</td><td id="d_g">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Convection Fan</td><td id="d_cf">-</td></tr>
+      <tr class="sub"><td colspan="2">Info:</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Cycle Time</td><td id="d_s">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Ignition failures</td><td id="d_f">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Error(s)</td><td id="d_e" class="warn"></td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Info</td><td id="d_i">-</td></tr>
+      <tr><td class="lbl">&nbsp;&nbsp;Firmware</td><td id="d_v">-</td></tr>
+    </table>
+  </div>
+</div>
+<div id="msg"></div>
+
+<script>
+// Must match ble.ino
+const SVC    = '6e57a5d0-0b1e-4c2a-9f3e-5741a7d0c001';
+const STATUS = '6e57a5d0-0b1e-4c2a-9f3e-5741a7d0c002';
+const CMD    = '6e57a5d0-0b1e-4c2a-9f3e-5741a7d0c003';
+const REPLY  = '6e57a5d0-0b1e-4c2a-9f3e-5741a7d0c004';
+const ERRORS = '6e57a5d0-0b1e-4c2a-9f3e-5741a7d0c005';
+
+let S = {};                    // latest status from the heater
+let device = null, chStatus = null, chCmd = null, chReply = null, chErrors = null;
+let errorText = '', errorSeq = -1;   // plain-English faults from the heater
+let wantConnected = false;     // user pressed Connect - keep reconnecting
+let editingTarget = 0;         // time the user last touched the target (don't overwrite while typing)
+const $ = id => document.getElementById(id);
+const dec = new TextDecoder(), enc = new TextEncoder();
+
+function toast(t, ms) {
+  const m = $('msg'); m.textContent = t; m.style.display = 'block';
+  clearTimeout(m._t); m._t = setTimeout(() => m.style.display = 'none', ms || 3000);
+}
+function setState(t) { $('state').textContent = t; }
+
+// ---- GATT operations one at a time (Chrome rejects overlapping ones) ----
+let gattQueue = Promise.resolve();
+function gatt(op) {
+  const p = gattQueue.then(op, op);
+  gattQueue = p.catch(() => {});   // keep the chain alive after a failure
+  return p;
+}
+
+function send(cmd) {
+  if (!chCmd) { toast('Not connected'); return; }
+  gatt(() => chCmd.writeValueWithResponse(enc.encode(cmd)))
+    .catch(e => toast('Send failed: ' + e.message, 5000));
+}
+
+function toggleHeater() { send(S.w ? 'heater_off' : 'heater_on'); }
+function setTarget() { editingTarget = Date.now(); send('room_target=' + $('room_target').value); }
+function nudge(d) {
+  const el = $('room_target');
+  el.value = Math.min(35, Math.max(5, (parseFloat(el.value) || 21) + d)).toFixed(1);
+  setTarget();
+}
+
+// ---- Connection ----
+function connectClick() {
+  if (device && device.gatt.connected) {          // Disconnect
+    wantConnected = false;
+    device.gatt.disconnect();
+    return;
+  }
+  if (!navigator.bluetooth) { showHelp(); return; }
+  navigator.bluetooth.requestDevice({ filters:[{ services:[SVC] }] })
+    .then(d => { useDevice(d); return connect(); })
+    .catch(e => { if (e.name !== 'NotFoundError') toast(e.message, 5000); });
+}
+
+function useDevice(d) {
+  device = d;
+  wantConnected = true;
+  device.addEventListener('gattserverdisconnected', onDisconnected);
+}
+
+async function connect() {
+  setState('Connecting...');
+  try {
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(SVC);
+    chStatus = await svc.getCharacteristic(STATUS);
+    chCmd = await svc.getCharacteristic(CMD);
+    chReply = await svc.getCharacteristic(REPLY);
+    chErrors = await svc.getCharacteristic(ERRORS);
+    // The first read needs an encrypted link - Android asks for the PIN here the first time
+    setState('Pairing...');
+    await readStatus();
+    chStatus.addEventListener('characteristicvaluechanged', onStatus);
+    chReply.addEventListener('characteristicvaluechanged', onReply);
+    chErrors.addEventListener('characteristicvaluechanged', ev => setErrors(dec.decode(ev.target.value)));
+    await gatt(() => chStatus.startNotifications());
+    await gatt(() => chReply.startNotifications());
+    await gatt(() => chErrors.startNotifications());
+    setState('Connected');
+    $('connBtn').textContent = 'Disconnect';
+    $('main').classList.remove('disabled');
+    $('help').textContent = '';
+  } catch (e) {
+    setState('Not connected');
+    toast('Connect failed: ' + e.message + '  (wrong PIN? Forget "Webastardo" in Android Bluetooth settings and try again)', 8000);
+    if (device.gatt.connected) device.gatt.disconnect();
+    else retry();
+  }
+}
+
+function onDisconnected() {
+  chStatus = chCmd = chReply = chErrors = null;
+  errorSeq = -1;
+  $('main').classList.add('disabled');
+  $('connBtn').textContent = 'Connect';
+  setState('Disconnected');
+  retry();
+}
+
+let retryTimer = null;
+function retry() {
+  if (!wantConnected || retryTimer) return;
+  setState('Reconnecting...');
+  retryTimer = setTimeout(() => { retryTimer = null; if (wantConnected && !device.gatt.connected) connect(); }, 3000);
+}
+
+// ---- Data from the heater ----
+function readStatus() {
+  return gatt(() => chStatus.readValue()).then(v => show(JSON.parse(dec.decode(v))));
+}
+
+function onStatus(ev) {
+  try { show(JSON.parse(dec.decode(ev.target.value))); }
+  catch (e) { readStatus().catch(() => {}); }   // Notification truncated (small MTU) - read it in full
+}
+
+function onReply(ev) {
+  try { const r = JSON.parse(dec.decode(ev.target.value)); toast(r.msg, r.ok ? 2500 : 6000); } catch (e) {}
+}
+
+const deg = v => (v === null || v === undefined) ? '-' : v.toFixed(1) + ' &deg;C';
+
+function show(d) {
+  S = d;
+  const hb = $('heatBtn');
+  hb.textContent = d.w ? 'ON' : 'OFF';
+  hb.className = 'big ' + (d.w ? 'on' : 'off');
+  $('modeText').innerHTML = d.mt + (d.e ? ' <span class="warn">- FAULT</span>' : '');
+  // d.e changes whenever the fault messages change - fetch the text when it does
+  if (d.e !== errorSeq) {
+    errorSeq = d.e;
+    if (!d.e) setErrors('');
+    else if (chErrors) gatt(() => chErrors.readValue()).then(v => setErrors(dec.decode(v))).catch(() => { errorSeq = -1; });
+  }
+  let note = '';
+  if (d.h) note = 'Hardware HEAT switch is ON - it keeps the heater on whatever this button says.';
+  if (d.bn) note = 'No 12V supply - the heater can\'t start.';
+  if (d.bl) note = 'Battery out of range - heater locked out until it recovers.';
+  if (d.e) note = 'Fault - see the red box at the top.';
+  if (d.sim) note += ' SIMULATED SENSORS.';
+  $('heatNote').innerHTML = note;
+
+  $('roomNow').innerHTML = d.rf ? (d.rx ? '<span class="warn">sensor fault</span>' : deg(d.rt)) : 'No sensor fitted';
+  if (Date.now() - editingTarget > 4000 && document.activeElement !== $('room_target')) $('room_target').value = d.tg.toFixed(1);
+  $('run_to_temp').checked = !!d.rr;
+  $('roomNote').innerHTML = d.tr ? '<b>Target reached - heater switched off.</b> Turn it on to restart.'
+                          : (!d.rf && d.rr ? 'Run to Temp needs a room sensor.' : '');
+
+  $('fanSw').checked = !!d.cm;
+  $('fanState').textContent = d.cf ? 'ON' : 'OFF';
+  const pb = $('purgeBtn');
+  pb.textContent = d.p ? 'ON' : 'OFF';
+  pb.className = d.p ? 'on' : 'off';
+
+  $('d_h').textContent = d.h ? 'ON' : 'OFF';
+  $('d_b').innerHTML = d.b.toFixed(1) + ' V' + (d.bn ? ' (no 12V)' : '') + (d.bl ? ' <span class="warn">LOCKOUT</span>' : '');
+  $('d_rt').innerHTML = d.rf ? deg(d.rt) : 'not fitted';
+  $('d_wt').innerHTML = d.wf ? '<span class="warn">sensor fault</span>' : deg(d.wt);
+  $('d_et').innerHTML = d.ef ? '<span class="warn">sensor fault</span>' : deg(d.et);
+  $('d_fl').textContent = d.fl ? 'ALIGHT' : 'EXTINGUISHED';
+  $('d_wp').textContent = d.wp + ' %';
+  $('d_fn').textContent = d.fn + ' %';
+  $('d_fu').textContent = d.fu.toFixed(2) + ' Hz';
+  $('d_g').textContent = d.g + ' s';
+  $('d_cf').textContent = d.cf ? 'ON' : 'OFF';
+  $('d_s').textContent = d.s + ' s';
+  $('d_f').textContent = d.f;
+  $('d_e').textContent = errorText;
+  $('d_i').textContent = d.i;
+  $('d_v').textContent = 'V' + d.v;
+
+}
+
+// Show the heater's fault messages, in plain English, at the top of the page
+function setErrors(t) {
+  errorText = t;
+  $('d_e').textContent = t;
+  const eb = $('errBanner');
+  if (t) {
+    eb.innerHTML = 'The heater has stopped because:<div class="txt">' + esc(t) + '</div>' +
+      '<span>It will not start again until this is fixed and cleared (on the heater&rsquo;s WiFi page, or by switching the heater&rsquo;s power off and on).</span>';
+    eb.style.display = 'block';
+  } else eb.style.display = 'none';
+}
+
+// Escape text for innerHTML (no quote characters here - they upset the Arduino builder)
+const esc = t => { const el = document.createElement('div'); el.textContent = t; return el.innerHTML; };
+
+// ---- Start-up ----
+function showHelp() {
+  $('help').innerHTML = navigator.bluetooth
+    ? 'Press <b>Connect</b> and choose <b>Webastardo</b>. The first time, Android asks for the PIN (default 123456 - it can be changed on the heater\'s WiFi page).'
+    : '<span class="warn">This browser has no Bluetooth support.</span> Use Chrome on Android, or the Bluefy browser on iPhone/iPad.';
+}
+showHelp();
+
+// Chrome remembers permitted devices - reconnect without the chooser if it can
+if (navigator.bluetooth && navigator.bluetooth.getDevices) {
+  navigator.bluetooth.getDevices().then(list => {
+    const d = list.find(x => x.name && x.name.startsWith('Webastardo'));
+    if (d) { useDevice(d); connect(); }
+  }).catch(() => {});
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
